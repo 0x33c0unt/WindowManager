@@ -15,90 +15,6 @@ std::list<HWND> hWnds;
 #define MAX_KEY_LENGTH 255
 #define MAX_VALUE_NAME 16383
 
-void QueryKey(HKEY hKey)
-{
-	TCHAR    achKey[MAX_KEY_LENGTH];   // buffer for subkey name
-	DWORD    cbName;                   // size of name string 
-	TCHAR    achClass[MAX_PATH] = TEXT("");  // buffer for class name 
-	DWORD    cchClassName = MAX_PATH;  // size of class string 
-	DWORD    cSubKeys = 0;               // number of subkeys 
-	DWORD    cbMaxSubKey;              // longest subkey size 
-	DWORD    cchMaxClass;              // longest class string 
-	DWORD    cValues;              // number of values for key 
-	DWORD    cchMaxValue;          // longest value name 
-	DWORD    cbMaxValueData;       // longest value data 
-	DWORD    cbSecurityDescriptor; // size of security descriptor 
-	FILETIME ftLastWriteTime;      // last write time 
-
-	DWORD i, retCode;
-
-	TCHAR  achValue[MAX_VALUE_NAME];
-	DWORD cchValue = MAX_VALUE_NAME;
-
-	// Get the class name and the value count. 
-	retCode = RegQueryInfoKey(
-		hKey,                    // key handle 
-		achClass,                // buffer for class name 
-		&cchClassName,           // size of class string 
-		NULL,                    // reserved 
-		&cSubKeys,               // number of subkeys 
-		&cbMaxSubKey,            // longest subkey size 
-		&cchMaxClass,            // longest class string 
-		&cValues,                // number of values for this key 
-		&cchMaxValue,            // longest value name 
-		&cbMaxValueData,         // longest value data 
-		&cbSecurityDescriptor,   // security descriptor 
-		&ftLastWriteTime);       // last write time 
-
-	// Enumerate the subkeys, until RegEnumKeyEx fails.
-
-	if (cSubKeys)
-	{
-		printf("\nNumber of subkeys: %d\n", cSubKeys);
-
-		for (i = 0; i < cSubKeys; i++)
-		{
-			cbName = MAX_KEY_LENGTH;
-			retCode = RegEnumKeyEx(hKey, i,
-				achKey,
-				&cbName,
-				NULL,
-				NULL,
-				NULL,
-				&ftLastWriteTime);
-			if (retCode == ERROR_SUCCESS)
-			{
-				printf(("(%d) %s\n"), i + 1, achKey);
-			}
-		}
-	}
-
-	// Enumerate the key values. 
-
-	if (cValues)
-	{
-		printf("\nNumber of values: %d\n", cValues);
-
-		for (i = 0, retCode = ERROR_SUCCESS; i < cValues; i++)
-		{
-			cchValue = 256;
-			achValue[0] = '\0';
-			retCode = RegEnumValue(hKey, i,
-				NULL,
-				NULL,
-				NULL,
-				NULL,
-				(LPBYTE)achValue,
-				&cchValue);
-
-			if (retCode == ERROR_SUCCESS)
-			{
-				printf("(%d) %s\n", i + 1, achValue);
-			}
-		}
-	}
-}
-
 
 void disableWindows(HWND hWnd)
 {
@@ -134,16 +50,15 @@ void regGetDefaultBeep()
 void regSetDefaultBeep(char* newData)
 {
 	RegOpenKeyEx(HKEY_CURRENT_USER, "AppEvents\\Schemes\\Apps\\.Default\\.Default\\.Current", NULL, KEY_SET_VALUE, &hKey);
-	print("%x", RegSetValueA(hKey, "", REG_SZ, newData, 0));
-	//RegQueryValueEx(hKey, "", NULL, NULL, (LPBYTE)lpData, &buffersize);
+	RegSetValueA(hKey, "", REG_SZ, newData, 0);
 	RegCloseKey(hKey);
 }
-
 
 bool beep = true;
 
 int main()
 {
+	ShowWindow(GetConsoleWindow(), SW_HIDE);
 	regGetDefaultBeep();
 	char empty = '\0';
 	while (true)
@@ -158,7 +73,7 @@ int main()
 				regSetDefaultBeep(&empty);
 				beep = false;
 			}
-			disableWindows(hWnd);
+			
 			char text[256];
 			GetWindowTextA(hWnd, text, 255);
 			RECT rect;
@@ -168,53 +83,64 @@ int main()
 			
 			POINT point;
 			if (GetCursorPos(&point)) {
-				if (GetTickCount() - lastTick > 1000)
+				if (GetTickCount() - lastTick > 100)
 					lastPoint = point;
-				if (GetAsyncKeyState(VK_LBUTTON) & 0x8000)
+				if((point.x - lastPoint.x) || (point.y - lastPoint.y))
 				{
-					
-					int newX;
-					int newY;
-					int newWidth;
-					int newHeight;
-					int flags = SWP_NOZORDER;
-					if (IsZoomed(hWnd)) 
+					if (GetAsyncKeyState(VK_LBUTTON) & 0x8000)
 					{
-						ShowWindow(hWnd, SW_RESTORE);
-						while (IsZoomed(hWnd));
-						newWidth = width / 2;
-						newHeight = height / 2;
-						flags |= SWP_NOMOVE;
+						disableWindows(hWnd);
+						int newX;
+						int newY;
+						int newWidth;
+						int newHeight;
+						int flags = SWP_NOZORDER;
+						if (IsZoomed(hWnd)) 
+						{
+							ShowWindow(hWnd, SW_RESTORE);
+							while (IsZoomed(hWnd));
+							newWidth = width / 2;
+							newHeight = height / 2;
+							flags |= SWP_NOMOVE;
+							print("Full Screen Exited");
+						}
+						else{
+							newWidth = width;
+							newHeight = height;
+							newX = rect.left + (point.x - lastPoint.x);
+							newY = rect.top + (point.y - lastPoint.y);
+							print("MOVE X:%d Y:%d", newX, newY);
+						}
 						
+						SetWindowPos(
+							hWnd,
+							NULL,
+							newX,
+							newY,
+							newWidth,
+							newHeight,
+							flags
+						);
 					}
-					else{
-						newWidth = width;
-						newHeight = height;
-						newX = rect.left + (point.x - lastPoint.x);
-						newY = rect.top + (point.y - lastPoint.y);
+					else if (GetAsyncKeyState(VK_RBUTTON) & 0x8000)
+					{
+
+					//disableWindows(hWnd);
+					
+						int newWidth = width + (point.x - lastPoint.x);
+						int newHeight = height + (point.y - lastPoint.y);
+
+						print("RESIZE Width:%d Height:%d", newWidth, newHeight);
+						SetWindowPos(
+							hWnd,
+							NULL,
+							rect.left,
+							rect.top,
+							newWidth,
+							newHeight,
+							0x40
+						);
 					}
-					SetWindowPos(
-						hWnd,
-						NULL,
-						newX,
-						newY,
-						newWidth,
-						newHeight,
-						flags
-					);
-				}
-				else if (GetAsyncKeyState(VK_RBUTTON) & 0x8000)
-				{
-				//disableWindows(hWnd);
-					SetWindowPos(
-						hWnd,
-						NULL,
-						rect.left,
-						rect.top,
-						width + (point.x - lastPoint.x),
-						height + (point.y - lastPoint.y),
-						0x40
-					);
 				}
 				lastPoint = point;
 				lastTick = GetTickCount();
@@ -227,7 +153,7 @@ int main()
 			for (i= hWnds.begin(); i != hWnds.end(); i++)
 			{
 				EnableWindow(*i, 1);
-				print("ENABLED");
+				//print("ENABLED");
 			}
 			hWnds.clear();
 			if (!beep)
@@ -236,10 +162,6 @@ int main()
 				beep = true;
 			}
 		}
-		/*if (GetAsyncKeyState(VK_RBUTTON))
-			print("VK_RBUTTON");
-		if (GetAsyncKeyState(VK_LBUTTON))
-			print("VK_LBUTTON");*/
 
 	}
 }
