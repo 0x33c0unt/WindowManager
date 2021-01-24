@@ -32,7 +32,6 @@ void disableWindows(HWND hWnd)
 	{
 		EnableWindow(hWnd, 0);
 		hWnds.push_back(hWnd);
-		print("Disabled");
 	}
 }
 
@@ -63,7 +62,7 @@ int main()
 	char empty = '\0';
 	while (true)
 	{
-		Sleep(10);
+		Sleep(1);
 		HWND hWnd = GetForegroundWindow();
 		
 		if (GetAsyncKeyState(VK_MENU))
@@ -85,9 +84,7 @@ int main()
 			if (GetCursorPos(&point)) {
 				if (GetTickCount() - lastTick > 100)
 					lastPoint = point;
-				if((point.x - lastPoint.x) || (point.y - lastPoint.y))
-				{
-					if (GetAsyncKeyState(VK_LBUTTON) & 0x8000)
+					if (GetAsyncKeyState(VK_LBUTTON) & 0x8000 && ((point.x - lastPoint.x) || (point.y - lastPoint.y)))
 					{
 						disableWindows(hWnd);
 						int newX;
@@ -124,12 +121,9 @@ int main()
 					}
 					else if (GetAsyncKeyState(VK_RBUTTON) & 0x8000)
 					{
-
-					//disableWindows(hWnd);
-					
+						disableWindows(hWnd);
 						int newWidth = width + (point.x - lastPoint.x);
 						int newHeight = height + (point.y - lastPoint.y);
-
 						print("RESIZE Width:%d Height:%d", newWidth, newHeight);
 						SetWindowPos(
 							hWnd,
@@ -141,11 +135,9 @@ int main()
 							0x40
 						);
 					}
-				}
 				lastPoint = point;
 				lastTick = GetTickCount();
 			}
-			//
 		}
 		else
 		{
@@ -153,7 +145,6 @@ int main()
 			for (i= hWnds.begin(); i != hWnds.end(); i++)
 			{
 				EnableWindow(*i, 1);
-				//print("ENABLED");
 			}
 			hWnds.clear();
 			if (!beep)
