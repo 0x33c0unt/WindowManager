@@ -148,7 +148,7 @@
     <ResourceCompile Include="Window Management Helper.rc" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\..\..\..\..\Downloads\icons8-resize-96.ico" />
+    <Image Include="icons8-resize-96.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
