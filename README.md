@@ -1,6 +1,6 @@
 # Window Manager
 
-Linux like window manager on Windows Operating System. 
+Linux like window manager for Windows Operating System. 
 
 ALT + LEFT MOUSE BUTTON : MOVE
 
