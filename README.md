@@ -5,6 +5,7 @@ Linux like window manager for Windows Operating System.
 ALT + LEFT MOUSE BUTTON : MOVE
 
 ALT + RIGHT MOUSE BUTTON : RESIZE
+
 ## First week (18-24 January)
 - Completed 
     1. First running version
@@ -25,6 +26,9 @@ ALT + RIGHT MOUSE BUTTON : RESIZE
 4. Performance optimization
 5. Prevent multiple instances
 6. Build instructions for README
+7. Better Handling on full Screen
+8. Check whether mouse pointer on the frame
+9. Deactivate if CTRL or SHIFT keys were pressed beside of ALT
 
 ## PREVIEW
 ![DEMO](a.gif)
