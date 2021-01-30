@@ -41,14 +41,14 @@ char* lpData = new char[buffersize];
 
 void regGetDefaultBeep()
 {
-	RegOpenKeyEx(HKEY_CURRENT_USER, "AppEvents\\Schemes\\Apps\\.Default\\.Default\\.Current", NULL, KEY_READ, &hKey);
-	RegQueryValueEx(hKey, "", NULL, NULL, (LPBYTE)lpData, &buffersize);
+	RegOpenKeyExA(HKEY_CURRENT_USER, "AppEvents\\Schemes\\Apps\\.Default\\.Default\\.Current", NULL, KEY_READ, &hKey);
+	RegQueryValueExA(hKey, "", NULL, NULL, (LPBYTE)lpData, &buffersize);
 	RegCloseKey(hKey);
 }
 
 void regSetDefaultBeep(char* newData)
 {
-	RegOpenKeyEx(HKEY_CURRENT_USER, "AppEvents\\Schemes\\Apps\\.Default\\.Default\\.Current", NULL, KEY_SET_VALUE, &hKey);
+	RegOpenKeyExA(HKEY_CURRENT_USER, "AppEvents\\Schemes\\Apps\\.Default\\.Default\\.Current", NULL, KEY_SET_VALUE, &hKey);
 	RegSetValueA(hKey, "", REG_SZ, newData, 0);
 	RegCloseKey(hKey);
 }
@@ -65,7 +65,7 @@ int main()
 		Sleep(1);
 		HWND hWnd = GetForegroundWindow();
 		
-		if (GetAsyncKeyState(VK_MENU))
+		if (GetAsyncKeyState(VK_LMENU) && !GetAsyncKeyState(VK_SHIFT) && !GetAsyncKeyState(VK_CONTROL) && !GetAsyncKeyState(VK_TAB))
 		{
 			if (beep)
 			{
@@ -87,10 +87,10 @@ int main()
 					if (GetAsyncKeyState(VK_LBUTTON) & 0x8000 && ((point.x - lastPoint.x) || (point.y - lastPoint.y)))
 					{
 						disableWindows(hWnd);
-						int newX;
-						int newY;
-						int newWidth;
-						int newHeight;
+						int newX = 0;
+						int newY = 0;
+						int newWidth = 0;
+						int newHeight = 0;
 						int flags = SWP_NOZORDER;
 						if (IsZoomed(hWnd)) 
 						{
@@ -135,6 +135,32 @@ int main()
 							0x40
 						);
 					}
+					else if (GetAsyncKeyState('T') && !IsZoomed(hWnd))
+					{
+						if(GetWindowLong(hWnd, GWL_EXSTYLE) & WS_EX_TOPMOST)
+						SetWindowPos(
+							hWnd,
+							HWND_NOTOPMOST,
+							0,
+							0,
+							0,
+							0,
+							SWP_NOMOVE | SWP_NOSIZE
+						);
+
+						else {
+						SetWindowPos(
+							hWnd,
+							HWND_TOPMOST,
+							0,
+							0,
+							0,
+							0,
+							SWP_NOMOVE | SWP_NOSIZE
+						);
+						}
+					}
+			
 				lastPoint = point;
 				lastTick = GetTickCount();
 			}

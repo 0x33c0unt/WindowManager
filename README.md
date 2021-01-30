@@ -2,9 +2,15 @@
 
 Linux like window manager for Windows Operating System. 
 
-ALT + LEFT MOUSE BUTTON : MOVE
+ALT+LBUTTON : MOVE
 
-ALT + RIGHT MOUSE BUTTON : RESIZE
+ALT+RBUTTON : RESIZE
+
+ALT+P : PAUSE/RESUME Process 
+
+ALT+LSHIFT+K : KILL Process
+
+ALT+T : Set on top and vice versa
 
 ## First week (18-24 January)
 - Completed 
@@ -28,7 +34,8 @@ ALT + RIGHT MOUSE BUTTON : RESIZE
 6. Build instructions for README
 7. Better Handling on full Screen
 8. Check whether mouse pointer on the frame
-9. Deactivate if CTRL or SHIFT keys were pressed beside of ALT
+9. Deactivate if CTRL, SHIFT, TAB keys were pressed beside of ALT
+10. Additional Functions: Set window on top, pause, resume process 
 
 ## PREVIEW
 ![DEMO](a.gif)
