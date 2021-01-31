@@ -1,13 +1,14 @@
-
+#define print(fmt, ...) printf(fmt "\n", __VA_ARGS__)
 #include <Windows.h>
+#include <Tlhelp32.h>
 #include <stdio.h>
 #include <iostream>
 #include <list>
-#define print(fmt, ...) printf(fmt "\n", __VA_ARGS__)
+
 
 POINT lastPoint;
 int lastTick;
-std::list<HWND> hWnds;
+
 
 
 #include <tchar.h>
@@ -18,10 +19,74 @@ std::list<HWND> hWnds;
 
 HWND hConsole;
 
+char windowText[256];
+char windowProcess[256];
+
+using namespace std;
+
+list<HWND> hWnds;
+
+string GetLastErrorAsString()
+{
+	DWORD errorMessageID = ::GetLastError();
+	if (errorMessageID == 0) {
+		return string();
+	}
+
+	LPSTR messageBuffer = nullptr;
+
+	size_t size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+		NULL, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, NULL);
+
+	string message(messageBuffer, size);
+
+	LocalFree(messageBuffer);
+
+	return message;
+}
+
+char* getWindowText(HWND hWnd)
+{
+	GetWindowTextA(hWnd, windowText, 255);
+	return windowText;
+}
+
+char* getWindowProcess(HWND hWnd)
+{
+	DWORD pid;
+	PROCESSENTRY32 entry;
+	entry.dwSize = sizeof(PROCESSENTRY32);
+	HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (hWnd != 0)
+	{
+		GetWindowThreadProcessId(hWnd, &pid);
+	}
+	if (Process32First(snapshot, &entry) == TRUE)
+	{
+		while (Process32Next(snapshot, &entry) == TRUE)
+		{
+			if (pid == entry.th32ProcessID)
+			{
+				strcpy_s((char*)windowProcess, 255, (char*)&entry.szExeFile);
+				return windowProcess;
+			}
+		}
+	}
+	return 0;
+}
+char* getWindowProcessFullPath(HANDLE h)
+{
+	DWORD size = 255;
+	QueryFullProcessImageNameA(h, 0, windowProcess, &size);
+	return windowProcess;
+}
+
+
+
 void disableWindows(HWND hWnd)
 {
 	bool found = false;
-	std::list <HWND>::iterator i;
+	list <HWND>::iterator i;
 	for (i = hWnds.begin(); i != hWnds.end(); i++)
 	{
 		if (hWnd == *i)
@@ -70,14 +135,14 @@ void move(HWND hWnd, int width, int height, RECT rect, POINT point)
 		newWidth = width / 2;
 		newHeight = height / 2;
 		flags |= SWP_NOMOVE;
-		print("Exited from Full Screen");
+		print("%s Exited from Full Screen", getWindowText(hWnd));
 	}
 	else {
 		newWidth = width;
 		newHeight = height;
 		newX = rect.left + (point.x - lastPoint.x);
 		newY = rect.top + (point.y - lastPoint.y);
-		print("MOVE X: %d Y: %d", newX, newY);
+		print("Moving %s to X: %d Y: %d", getWindowText(hWnd), newX, newY);
 	}
 
 	SetWindowPos(
@@ -91,20 +156,12 @@ void move(HWND hWnd, int width, int height, RECT rect, POINT point)
 	);
 }
 
-char windowText[256];
-
-char* getWindowText(HWND hWnd)
-{
-	GetWindowTextA(hWnd, windowText, 255);
-	return windowText;
-}
-
 void resize(HWND hWnd, int width, int height, RECT rect, POINT point)
 {
 	disableWindows(hWnd);
 	int newWidth = width + (point.x - lastPoint.x);
 	int newHeight = height + (point.y - lastPoint.y);
-	print("RESIZE Width: %d Height: %d", newWidth, newHeight);
+	print("Resizing: %s to Width: %d Height: %d %", getWindowText(hWnd), newWidth, newHeight);
 	SetWindowPos(
 		hWnd,
 		NULL,
@@ -119,6 +176,8 @@ void resize(HWND hWnd, int width, int height, RECT rect, POINT point)
 void setOnTop(HWND hWnd)
 {
 	if (GetWindowLong(hWnd, GWL_EXSTYLE) & WS_EX_TOPMOST)
+	{
+		print("%s on not Top", getWindowText(hWnd));
 		SetWindowPos(
 			hWnd,
 			HWND_NOTOPMOST,
@@ -128,8 +187,9 @@ void setOnTop(HWND hWnd)
 			0,
 			SWP_NOMOVE | SWP_NOSIZE
 		);
-
+	}
 	else {
+		print("%s on Top", getWindowText(hWnd));
 		SetWindowPos(
 			hWnd,
 			HWND_TOPMOST,
@@ -142,18 +202,55 @@ void setOnTop(HWND hWnd)
 	}
 }
 
-void kill(HWND hWnd)
+inline void printLastError()
+{
+	print("%s", GetLastErrorAsString().c_str());
+}
+
+bool kill(HWND hWnd)
 {
 	DWORD pid;
 	GetWindowThreadProcessId(hWnd, &pid);
-	HANDLE h = OpenProcess(PROCESS_TERMINATE, 0, pid);
-	TerminateProcess(h, 0);
+	HANDLE h = OpenProcess(PROCESS_TERMINATE | PROCESS_QUERY_INFORMATION, 0, pid);
+	if (h == NULL)
+	{
+		printLastError();
+		return false;
+	}
+	if (TerminateProcess(h, 0))
+	{
+		if (getWindowProcess(hWnd))
+			print("%s is Terminated", windowProcess);
+		else
+		{
+			printLastError();
+			return false;
+		}
+	}
+	else
+	{
+		printLastError();
+		return false;
+	}
+	return true;
+}
+
+void test()
+{
+	HWND hWnd = GetForegroundWindow();
+	DWORD pid;
+	GetWindowThreadProcessId(hWnd, &pid);
+	HANDLE h = OpenProcess(PROCESS_QUERY_INFORMATION, 1, pid);
+	getWindowProcess(hWnd);
 }
 
 void keyboardEvents(HWND hWnd)
 {
 	if (GetAsyncKeyState('T') && !IsZoomed(hWnd))
+	{
 		setOnTop(hWnd);
+		Sleep(300);
+	}
 	else if (GetAsyncKeyState('K') && GetAsyncKeyState(VK_LCONTROL) & 0x8000)
 	{
 		kill(hWnd);
@@ -161,13 +258,18 @@ void keyboardEvents(HWND hWnd)
 	}
 	else if (GetAsyncKeyState('I') && GetAsyncKeyState(VK_LCONTROL) & 0x8000)
 		exit(0);
+	else if (GetAsyncKeyState('B') && GetAsyncKeyState(VK_LCONTROL) & 0x8000)
+		test();
 	else if (GetAsyncKeyState('L') && GetAsyncKeyState(VK_LCONTROL) & 0x8000)
 	{
 		int r = GetWindowLong(hConsole, GWL_STYLE);
 		if (r & WS_VISIBLE)
 			ShowWindow(hConsole, SW_HIDE);
 		else
+		{
 			ShowWindow(hConsole, SW_SHOW);
+			BringWindowToTop(hConsole);
+		}
 		Sleep(300);
 	}
 }
@@ -200,10 +302,13 @@ bool beep = true;
 
 int main()
 {
+	SetConsoleTitle("Window Manager - 0x33c0unt");
 	hConsole = GetConsoleWindow();
-	ShowWindow(hConsole, SW_SHOW);
+	ShowWindow(hConsole, SW_HIDE);
 	regGetDefaultBeep();
+
 	char empty = '\0';
+
 	while (true)
 	{
 		Sleep(1);
@@ -223,7 +328,7 @@ int main()
 		}
 		else
 		{
-			std::list <HWND>::iterator i;
+			list <HWND>::iterator i;
 			for (i= hWnds.begin(); i != hWnds.end(); i++)
 				EnableWindow(*i, 1);
 			hWnds.clear();
