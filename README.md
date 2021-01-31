@@ -6,11 +6,17 @@ ALT+LBUTTON : MOVE
 
 ALT+RBUTTON : RESIZE
 
+ALT+T : Set on Top and Vice Versa
+
 ALT+P : PAUSE/RESUME Process 
 
-ALT+LSHIFT+K : KILL Process
+ALT+CTRL+K : KILL Process
 
-ALT+T : Set on top and vice versa
+ALT+CTRL+I : KILL Window Manager Itself
+
+ALT+CTRL+L : Show Logs
+
+
 
 ## First week (18-24 January)
 - Completed 
@@ -36,6 +42,8 @@ ALT+T : Set on top and vice versa
 8. Check whether mouse pointer on the frame
 9. Deactivate if CTRL, SHIFT, TAB keys were pressed beside of ALT
 10. Additional Functions: Set window on top, pause, resume process 
+11. Consider using callback via SetWindowsHookExA instead a while loop
+12. Keep Logs
 
 ## PREVIEW
 ![DEMO](a.gif)
