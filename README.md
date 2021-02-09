@@ -36,4 +36,4 @@ ALT+CTRL+L : Show Logs
 
 
 ## PREVIEW
-![DEMO](a.gif)
+![DEMO](demo.gif)

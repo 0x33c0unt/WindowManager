@@ -82,9 +82,11 @@ LRESULT __stdcall mouse_hook_callback(int nCode, WPARAM wParam, LPARAM lParam)
 	if (nCode >= 0)
 	{
 			mbdStruct = *((MSLLHOOKSTRUCT*)lParam);
+			
 			if ((wParam == 0x200 || wParam == 0x201) && GetAsyncKeyState(VK_LMENU) & 0x8000 && !((GetAsyncKeyState(VK_SHIFT) & 0x8000) | (GetAsyncKeyState(VK_TAB) & 0x8000)))
+			{
 				mouse_events(wParam, mbdStruct);
-			//else if (wParam == 0x202)
+			}
 				
 	}
 	return CallNextHookEx(mouse_hook, nCode, wParam, lParam);
@@ -256,13 +258,17 @@ DWORD inject_basic(HWND hWnd)
 }
 
 
-void run_on_startup()
+void run_on_startup() 
 {
 	char path[MAX_PATH];
-	GetModuleFileNameA(nullptr, path, MAX_PATH);
+	char path2[MAX_PATH+2] = "\"";
+	int path_len = GetModuleFileNameA(nullptr, path, MAX_PATH);
+	strncpy_s(path2 + 1, MAX_PATH + 1, path, path_len);
+	path2[path_len+1] = '\"';
+	path2[path_len+2] = '\0';
 	HKEY hkey = NULL;
 	LONG createStatus = RegCreateKey(HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", &hkey); //Creates a key       
-	LONG status = RegSetValueEx(hkey, "WindowManager", 0, REG_SZ, (BYTE*)path, (strlen(path) + 1) * sizeof(wchar_t));
+	LONG status = RegSetValueEx(hkey, "WindowManager", 0, REG_SZ, (BYTE*)path2, path_len+2);
 }
 
 bool read_config()
@@ -401,6 +407,7 @@ void exit_full_screen(HWND hWnd, int width, int height, RECT& rect, POINT point)
 	GetWindowRect(hWnd, &rect);
 	
 }
+
 void move(HWND hWnd, int width, int height, RECT rect, POINT point)
 {
 	int newX = 0;
@@ -572,6 +579,7 @@ void mouse_events(DWORD key, MSLLHOOKSTRUCT msInfo)
 	HWND hWnd = GetForegroundWindow();
 	if (hWnd == console_handle)
 		return;
+
 	RECT rect;
 	GetWindowRect(hWnd, &rect);
 	int width = rect.right - rect.left;
@@ -580,22 +588,23 @@ void mouse_events(DWORD key, MSLLHOOKSTRUCT msInfo)
 	POINT point = msInfo.pt;
 	if (GetTickCount() - last_tick > 100)
 		last_point = point;
+
+	if (IsWindowEnabled(hWnd))
+		disable_windows(hWnd);
+
 	bool position_change = ((point.x - last_point.x) || (point.y - last_point.y));
 	if (position_change)
 	{
-		if (IsWindowEnabled(hWnd))
-			disable_windows(hWnd);
-
 		if (IsZoomed(hWnd) && GetAsyncKeyState(VK_LBUTTON) & 0x8000 )
 			exit_full_screen(hWnd, width, height, rect, point);
 		if (GetAsyncKeyState(VK_LBUTTON) & 0x8000)
 			move(hWnd, width, height, rect, point);
 		else if (GetAsyncKeyState(VK_RBUTTON) & 0x8000)
 			resize(hWnd, width, height, rect, point);
-
-		enable_windows();
 	}
-	
+
+	enable_windows();
+
 	last_point = point;
 	last_tick = GetTickCount();
 }
@@ -634,7 +643,7 @@ int main()
 	if (first_run)
 	{
 		ShowWindow(console_handle, SW_SHOW);
-		print("Do you want to run this app on startup?");
+		print("Do you want to run this app on startup? [Y/N]");
 		char answer = getchar();
 		if (answer == 'y' || answer == 'Y')
 			run_on_startup();
@@ -645,8 +654,7 @@ int main()
 		out << "first_run=" << 0 << endl;
 		out.close();
 	}
-	else
-		ShowWindow(console_handle, SW_HIDE);
+	ShowWindow(console_handle, SW_HIDE);
 
 	SetConsoleTitle("Window Manager - 0x33c0unt");
 
