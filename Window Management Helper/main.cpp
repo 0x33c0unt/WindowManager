@@ -28,7 +28,7 @@ char windowProcess[256];
 
 POINT last_point;
 int last_tick;
-
+int last_left_click;
 //config
 string dll_path;
 string dll64_path;
@@ -588,6 +588,16 @@ void mouse_events(DWORD key, MSLLHOOKSTRUCT msInfo)
 	POINT point = msInfo.pt;
 	if (GetTickCount() - last_tick > 100)
 		last_point = point;
+	if (key == 0x201)
+	{
+		if(GetTickCount() - last_left_click < 200)
+			if(IsZoomed(hWnd))
+				ShowWindow(hWnd, SW_RESTORE);
+			else
+				ShowWindow(hWnd, SW_MAXIMIZE);
+		last_left_click = GetTickCount();
+	}
+		
 
 	if (IsWindowEnabled(hWnd))
 		disable_windows(hWnd);
