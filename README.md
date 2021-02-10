@@ -4,15 +4,17 @@ Window manager for Windows Operating System.
 
 Shortcuts;
 
-ALT+LBUTTON : MOVE
+ALT+LCLICK : MOVE/DRAG
 
-ALT+RBUTTON : RESIZE
+ALT+RCLICK : RESIZE
+
+ALT+DOUBLE LCLICK : Full Screen and Restore
 
 ALT+CTRL+T : Set on Top and Vice Versa
 
 ALT+CTRL+D : DLL Inject 
 
-ALT+CTRL+P : PAUSE/RESUME Process 
+ALT+CTRL+P : PAUSE and RESUME Process 
 
 ALT+CTRL+K : KILL Process
 
@@ -25,8 +27,7 @@ ALT+CTRL+L : Show Logs
 - On the very first run, It asks for running on startup. In case of yes response, puts "WindowManager" key to "\HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" and sets it value to executable path.
 - Checks any other instance running. 
 - Works by setting a callback for mouse and keyboard events.
-- Disables windows notification beep sound by setting a registry value at "AppEvents\Schemes\Apps\\.Default\\.Default\\.Current".
-- Disables window events while moving and resizing to prevent any kind of misclicks.
+- Cancels mouse clicks to prevent misclicks while moving/resizing.
 - Exits from full screen on move/resize events.
 - Has a config file with 3 options
 
