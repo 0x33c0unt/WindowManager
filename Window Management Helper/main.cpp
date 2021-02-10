@@ -46,13 +46,6 @@ void mouse_events(DWORD key, MSLLHOOKSTRUCT msInfo);
 char* get_window_text(HWND hWnd);
 char* get_window_process(HWND hWnd);
 
-void enable_windows()
-{
-	list <HWND>::iterator i;
-	for (i = hWnds.begin(); i != hWnds.end(); i++)
-		EnableWindow(*i, 1);
-	hWnds.clear();
-}
 
 DWORD hwnd_to_pid(HWND hWnd)
 {
@@ -76,19 +69,40 @@ LRESULT __stdcall keyboard_hook_callback(int nCode, WPARAM wParam, LPARAM lParam
 	}
 	return CallNextHookEx(keyboard_hook, nCode, wParam, lParam);
 }
-
+bool left_button = false;
+bool right_button = false;
 LRESULT __stdcall mouse_hook_callback(int nCode, WPARAM wParam, LPARAM lParam)
 {
 	if (nCode >= 0)
 	{
 			mbdStruct = *((MSLLHOOKSTRUCT*)lParam);
 			
-			if ((wParam == 0x200 || wParam == 0x201) && GetAsyncKeyState(VK_LMENU) & 0x8000 && !((GetAsyncKeyState(VK_SHIFT) & 0x8000) | (GetAsyncKeyState(VK_TAB) & 0x8000)))
+
+			LPMSG msg = (LPMSG)lParam;
+
+			switch (wParam)
+			{
+			case 0x201:
+				left_button = true;
+				break;
+			case 0x202:
+				left_button = false;
+				break;
+			case 0x204:
+				right_button = true;
+				break;
+			case 0x205:
+				right_button = false;
+				break;
+			}
+			if ((wParam == 0x200 || wParam == 0x201 || wParam == 0x204) && GetAsyncKeyState(VK_LMENU) & 0x8000 && !((GetAsyncKeyState(VK_SHIFT) & 0x8000) | (GetAsyncKeyState(VK_TAB) & 0x8000)))
 			{
 				mouse_events(wParam, mbdStruct);
+				if (wParam == 0x201 || wParam == 0x204)
+					return 1; // cancel mouse activity
 			}
-				
 	}
+	
 	return CallNextHookEx(mouse_hook, nCode, wParam, lParam);
 }
 
@@ -117,26 +131,21 @@ threads* ListProcessThreads(DWORD dwOwnerPID)
 
 	hThreadSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
 	if (hThreadSnap == INVALID_HANDLE_VALUE)
-	{
-		//_convertions.printError("ListProcessThreads1");
 		return _threads;
-	}
 
 	int i = 0;
 	_threads->te32[i].dwSize = sizeof(THREADENTRY32);
+
 	if (!Thread32First(hThreadSnap, &_threads->te32[i]))
 	{
-		//_convertions.printError("ListProcessThreads2");
 		CloseHandle(hThreadSnap);
 		return _threads;
 	}
 	do
 	{
 		if (_threads->te32[i].th32OwnerProcessID == dwOwnerPID)
-		{
-			//printf("\n     THREAD ID      = 0x%08X\n", _threads.te32[i].th32ThreadID);
 			i++;
-		}
+
 		if (i == 256)
 		{
 			print("Maximum Thread Count Exceeded");
@@ -347,42 +356,9 @@ char* get_window_process_full_path(HANDLE h)
 }
 
 
-void disable_windows(HWND hWnd)
-{
-	bool found = false;
-	list <HWND>::iterator i;
-	for (i = hWnds.begin(); i != hWnds.end(); i++)
-	{
-		if (hWnd == *i)
-		{
-			found = true;
-			break;
-		}
-	}
-	if (!found)
-	{
-		EnableWindow(hWnd, 0);
-		hWnds.push_back(hWnd);
-	}
-}
-
 HKEY hKey;
 DWORD buffersize = 1024;
 char* lpData = new char[buffersize];
-
-void reg_get_default_beep()
-{
-	RegOpenKeyExA(HKEY_CURRENT_USER, "AppEvents\\Schemes\\Apps\\.Default\\.Default\\.Current", NULL, KEY_READ, &hKey);
-	RegQueryValueExA(hKey, "", NULL, NULL, (LPBYTE)lpData, &buffersize);
-	RegCloseKey(hKey);
-}
-
-void reg_set_default_beep()
-{
-	RegOpenKeyExA(HKEY_CURRENT_USER, "AppEvents\\Schemes\\Apps\\.Default\\.Default\\.Current", NULL, KEY_SET_VALUE, &hKey);
-	RegSetValueA(hKey, "", REG_SZ, "", 0);
-	RegCloseKey(hKey);
-}
 
 void exit_full_screen(HWND hWnd, int width, int height, RECT& rect, POINT point)
 {
@@ -416,11 +392,11 @@ void move(HWND hWnd, int width, int height, RECT rect, POINT point)
 	int newHeight = 0;
 	int flags = SWP_NOZORDER | SWP_NOSIZE;
 	
-		newWidth = width;
-		newHeight = height;
-		newX = rect.left + (point.x - last_point.x);
-		newY = rect.top + (point.y - last_point.y);
-		print("Moving %s to X: %d Y: %d", get_window_text(hWnd), newX, newY);
+	newWidth = width;
+	newHeight = height;
+	newX = rect.left + (point.x - last_point.x);
+	newY = rect.top + (point.y - last_point.y);
+	print("Moving %s to X: %d Y: %d", get_window_text(hWnd), newX, newY);
 
 	SetWindowPos(
 		hWnd,
@@ -552,8 +528,8 @@ void keyboard_events(DWORD key)
 			ShowWindow(console_handle, SW_HIDE);
 		else
 		{
-			ShowWindow(console_handle, SW_SHOW);
 			SetForegroundWindow(console_handle);
+			ShowWindow(console_handle, SW_SHOW);
 		}
 	}
 
@@ -588,6 +564,7 @@ void mouse_events(DWORD key, MSLLHOOKSTRUCT msInfo)
 	POINT point = msInfo.pt;
 	if (GetTickCount() - last_tick > 100)
 		last_point = point;
+
 	if (key == 0x201)
 	{
 		if(GetTickCount() - last_left_click < 200)
@@ -598,22 +575,16 @@ void mouse_events(DWORD key, MSLLHOOKSTRUCT msInfo)
 		last_left_click = GetTickCount();
 	}
 		
-
-	if (IsWindowEnabled(hWnd))
-		disable_windows(hWnd);
-
 	bool position_change = ((point.x - last_point.x) || (point.y - last_point.y));
 	if (position_change)
 	{
 		if (IsZoomed(hWnd) && GetAsyncKeyState(VK_LBUTTON) & 0x8000 )
 			exit_full_screen(hWnd, width, height, rect, point);
-		if (GetAsyncKeyState(VK_LBUTTON) & 0x8000)
+		if (left_button)
 			move(hWnd, width, height, rect, point);
-		else if (GetAsyncKeyState(VK_RBUTTON) & 0x8000)
+		else if (right_button)
 			resize(hWnd, width, height, rect, point);
 	}
-
-	enable_windows();
 
 	last_point = point;
 	last_tick = GetTickCount();
@@ -667,10 +638,6 @@ int main()
 	ShowWindow(console_handle, SW_HIDE);
 
 	SetConsoleTitle("Window Manager - 0x33c0unt");
-
-	reg_get_default_beep();
-	
-	reg_set_default_beep();
 
 	CreateThread(NULL, NULL, (LPTHREAD_START_ROUTINE)&msg_handler, NULL, NULL, NULL);
 
